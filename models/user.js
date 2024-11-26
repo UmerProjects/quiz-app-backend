@@ -31,29 +31,31 @@ const UserSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["student", "teacher"],
-      required: "Kindly define your role"
+      required: "Kindly define your role",
+    },
+    profileComplete: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }
 );
 
-
 UserSchema.pre("save", function (next) {
-    const user = this;
+  const user = this;
 
-    if (!user.isModified("password")) return next();
-    bcrypt.genSalt(10, (err, salt) => {
-        if (err) return next(err);
+  if (!user.isModified("password")) return next();
+  bcrypt.genSalt(10, (err, salt) => {
+    if (err) return next(err);
 
-        bcrypt.hash(user.password, salt, (err, hash) => {
-            if (err) return next(err);
+    bcrypt.hash(user.password, salt, (err, hash) => {
+      if (err) return next(err);
 
-            user.password = hash;
-            next();
-        });
+      user.password = hash;
+      next();
     });
+  });
 });
-
 
 UserSchema.methods.generateAccessJWT = function () {
   let payload = {

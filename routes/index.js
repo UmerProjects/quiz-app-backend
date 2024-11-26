@@ -1,4 +1,6 @@
 import auth from "./auth.js"
+import student from "./student.js"
+import teacher from "./teacher.js"
 
 const Router = (server) => {
 
@@ -7,6 +9,8 @@ const Router = (server) => {
     })
 
     server.use('/auth', auth)
+    server.use('/student', student);
+    server.use('/teacher', teacher)
 }
 
 export default Router

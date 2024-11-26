@@ -1,21 +1,22 @@
 import User from "../models/user.js";
 import bcrypt from "bcrypt";
-
+import blacklist from "../models/blacklist.js";
 
 export async function Register(req, res) {
   const { first_name, last_name, email, password, role } = req.body;
+
+  console.log(role)
   try {
     const existingUser = await User.findOne({ email });
+
     if (existingUser)
       return res.status(400).json({
         status: "failed",
         data: [],
         message: "It seems you already have an account, please log in instead.",
       });
-    // create an instance of a user
 
-
-    const newUser = new User({
+    const newUser = await User.create({
       first_name,
       last_name,
       email,
@@ -23,9 +24,8 @@ export async function Register(req, res) {
       role,
     });
 
-    const savedUser = await newUser.save(); // save new user into the database
-    console.log(savedUser);
-    const { ...user_data } = savedUser._doc;
+    console.log(newUser);
+    const { ...user_data } = newUser._doc;
     res.status(200).json({
       status: "success",
 
@@ -44,7 +44,6 @@ export async function Register(req, res) {
   res.end();
 }
 
-
 export async function Login(req, res) {
   const { email, password } = req.body;
   try {
@@ -60,23 +59,22 @@ export async function Login(req, res) {
       });
     }
 
-
     console.log(password);
+
     console.log(user.password);
 
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      console.log(isPasswordValid);
-    
-    if (!isPasswordValid) {
-        return res.status(401).json({
-            status: "failed",
-            data: {},
-            message: "Invalid email or password.",
-        });
-    }
-    
-    console.log("Before everything");
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log(isPasswordValid);
 
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        status: "failed",
+        data: {},
+        message: "Invalid email or password.",
+      });
+    }
+
+    console.log("Before everything");
 
     const token = user.generateAccessJWT();
 
@@ -98,4 +96,35 @@ export async function Login(req, res) {
   }
 }
 
+export async function Logout(req, res) {
+  try {
+    const authHeader = req.headers["authorization"];
 
+    if (!authHeader) return res.sendStatus(204);
+
+    const bearerToken = authHeader.split(" ")[1];
+
+    const checkIfBlacklisted = await blacklist.findOne({ token: bearerToken });
+
+    console.log("extracted token", bearerToken);
+
+    if (checkIfBlacklisted) return res.sendStatus(204);
+
+    const newBlacklist = new blacklist({
+      token: bearerToken,
+    });
+
+    await newBlacklist.save();
+
+    res.setHeader("Clear-Site-Data", '"cookies"');
+
+    res.status(200).json({ message: "You are logged out!" });
+    
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      message: "Internal Server Error",
+    });
+  }
+  res.end();
+}
